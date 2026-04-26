@@ -5,10 +5,18 @@ const DATA_DIR = path.resolve(__dirname, "..", "data");
 const BACKGROUNDS_FILE = path.join(DATA_DIR, "backgrounds.json");
 const CONFIG_FILE = path.join(DATA_DIR, "config.json");
 
+const SHUFFLE_DEFAULT_INTERVAL = 30;
+const SHUFFLE_MIN_INTERVAL = 1;
+const SHUFFLE_MAX_INTERVAL = 3600;
+
 const DEFAULT_CONFIG = {
   currentBackgroundId: null,
   eventName: "",
   qrHost: "",
+  shuffle: {
+    enabled: false,
+    intervalSeconds: SHUFFLE_DEFAULT_INTERVAL,
+  },
   wifi: {
     ssid: "",
     password: "",
@@ -36,6 +44,22 @@ function coerceConfigBool(value) {
     if (["false", "0", "no", "off", ""].includes(s)) return false;
   }
   return false;
+}
+
+function normalizeShuffleInterval(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) {
+    return SHUFFLE_DEFAULT_INTERVAL;
+  }
+  return Math.round(clamp(num, SHUFFLE_MIN_INTERVAL, SHUFFLE_MAX_INTERVAL));
+}
+
+function normalizeShuffle(rawShuffle) {
+  const raw = rawShuffle && typeof rawShuffle === "object" ? rawShuffle : {};
+  return {
+    enabled: coerceConfigBool(raw.enabled),
+    intervalSeconds: normalizeShuffleInterval(raw.intervalSeconds),
+  };
 }
 
 function normalizePoint(point, fallbackPoint) {
@@ -99,6 +123,7 @@ async function readConfig() {
       ...mergedWifi,
       hidden: coerceConfigBool(mergedWifi.hidden),
     },
+    shuffle: normalizeShuffle(config.shuffle),
     cornerPin: {
       ...DEFAULT_CONFIG.cornerPin,
       ...(config.cornerPin || {}),
@@ -163,6 +188,8 @@ async function reconcileState(defaultHost = "localhost:3000") {
     hidden: coerceConfigBool(rawWifi.hidden),
   };
 
+  const shuffle = normalizeShuffle(configRaw.shuffle);
+
   const normalizedConfig = {
     ...DEFAULT_CONFIG,
     ...configRaw,
@@ -170,6 +197,7 @@ async function reconcileState(defaultHost = "localhost:3000") {
     eventName,
     qrHost,
     wifi,
+    shuffle,
     cornerPin: normalizedCornerPin,
   };
 
@@ -187,4 +215,8 @@ module.exports = {
   saveBackgrounds,
   readConfig,
   saveConfig,
+  normalizeShuffle,
+  SHUFFLE_DEFAULT_INTERVAL,
+  SHUFFLE_MIN_INTERVAL,
+  SHUFFLE_MAX_INTERVAL,
 };

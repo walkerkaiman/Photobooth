@@ -1,5 +1,11 @@
 const express = require("express");
-const { readConfig, saveConfig, readBackgrounds } = require("../store");
+const {
+  readConfig,
+  saveConfig,
+  readBackgrounds,
+  normalizeShuffle,
+} = require("../store");
+const shuffleService = require("../shuffle");
 
 function coerceWifiBool(value, fallback) {
   if (value === true || value === 1) return true;
@@ -53,8 +59,15 @@ router.post("/", async (req, res, next) => {
           w.hidden !== undefined ? coerceWifiBool(w.hidden, Boolean(base.hidden)) : Boolean(base.hidden),
       };
     }
+    if (body.shuffle && typeof body.shuffle === "object") {
+      updated.shuffle = normalizeShuffle({
+        ...current.shuffle,
+        ...body.shuffle,
+      });
+    }
     await saveConfig(updated);
     req.app.get("io").emit("config:updated", updated);
+    await shuffleService.reconfigure();
     res.json(updated);
   } catch (error) {
     next(error);
@@ -80,6 +93,7 @@ router.post("/select-background", async (req, res, next) => {
 
     req.app.get("io").emit("background:changed", { backgroundId });
     req.app.get("io").emit("config:updated", updated);
+    await shuffleService.reconfigure();
     res.json({ ok: true });
   } catch (error) {
     next(error);

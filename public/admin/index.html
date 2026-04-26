@@ -34,16 +34,41 @@
         border: 1px solid #ddd;
         border-radius: 10px;
         overflow: hidden;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
       }
       .bgCard img {
         width: 100%;
         aspect-ratio: 16 / 9;
         object-fit: cover;
       }
+      .bgBody {
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .bgLabel {
+        width: 100%;
+        padding: 6px 8px;
+        font-size: 14px;
+        border: 1px solid #d2d5dc;
+        border-radius: 6px;
+        box-sizing: border-box;
+      }
+      .bgLabel.dirty {
+        border-color: #f59e0b;
+        background: #fffaf0;
+      }
       .bgActions {
         display: flex;
-        gap: 8px;
-        padding: 8px;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .bgActions button {
+        padding: 6px 10px;
+        font-size: 13px;
       }
       button {
         border: 0;
@@ -155,6 +180,33 @@
       <h2>Background Library</h2>
       <div class="panel">
         <div id="backgroundList"></div>
+      </div>
+
+      <h2>Shuffle</h2>
+      <div class="panel">
+        <label class="row" style="align-items: center">
+          <input type="checkbox" id="shuffleEnabled" style="width: auto; flex: 0" />
+          <span>Auto-cycle through random backgrounds</span>
+        </label>
+        <div class="row">
+          <label class="row" style="align-items: center; margin: 0; gap: 8px">
+            <span>Every</span>
+            <input
+              type="number"
+              id="shuffleInterval"
+              min="1"
+              max="3600"
+              step="1"
+              style="width: 100px; flex: 0"
+            />
+            <span>seconds</span>
+          </label>
+          <button type="button" id="saveShuffle">Save interval</button>
+        </div>
+        <div class="muted">
+          While enabled, the projection switches to a random background on this interval. The toggle saves automatically; click <strong>Save interval</strong> after changing seconds. Needs at least 2 backgrounds.
+        </div>
+        <div id="shuffleStatus" class="muted" style="margin-top: 8px"></div>
       </div>
 
       <h2>Guest Wi‑Fi QR</h2>

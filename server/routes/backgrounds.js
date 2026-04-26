@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs/promises");
 const crypto = require("crypto");
 const { readBackgrounds, saveBackgrounds, DATA_DIR, readConfig, saveConfig } = require("../store");
+const shuffleService = require("../shuffle");
 const {
   makeThumbnailName,
   generateImageThumbnail,
@@ -95,7 +96,37 @@ router.post("/upload", upload.single("file"), async (req, res, next) => {
     }
 
     req.app.get("io").emit("backgrounds:updated");
+    await shuffleService.reconfigure();
     res.status(201).json(toClient(item));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/:id", express.json(), async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const body = req.body || {};
+    const backgrounds = await readBackgrounds();
+    const index = backgrounds.findIndex((item) => item.id === id);
+    if (index === -1) {
+      res.status(404).json({ error: "Background not found" });
+      return;
+    }
+    const updated = { ...backgrounds[index] };
+    if (Object.prototype.hasOwnProperty.call(body, "label")) {
+      const label =
+        typeof body.label === "string" ? body.label.trim().slice(0, 200) : "";
+      if (!label) {
+        res.status(400).json({ error: "label cannot be empty" });
+        return;
+      }
+      updated.label = label;
+    }
+    backgrounds[index] = updated;
+    await saveBackgrounds(backgrounds);
+    req.app.get("io").emit("backgrounds:updated");
+    res.json(toClient(updated));
   } catch (error) {
     next(error);
   }
@@ -121,6 +152,7 @@ router.post("/reorder", express.json(), async (req, res, next) => {
       .filter(Boolean);
     await saveBackgrounds(reordered);
     req.app.get("io").emit("backgrounds:updated");
+    await shuffleService.reconfigure();
     res.json({ ok: true });
   } catch (error) {
     next(error);
@@ -152,6 +184,7 @@ router.delete("/:id", async (req, res, next) => {
     }
 
     req.app.get("io").emit("backgrounds:updated");
+    await shuffleService.reconfigure();
     res.json({ ok: true });
   } catch (error) {
     next(error);

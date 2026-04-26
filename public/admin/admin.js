@@ -21,6 +21,10 @@ const wifiHidden = document.getElementById("wifiHidden");
 const saveWifiBtn = document.getElementById("saveWifi");
 const qrWifiImg = document.getElementById("qrWifiImg");
 const qrWifiCaption = document.getElementById("qrWifiCaption");
+const shuffleEnabledInput = document.getElementById("shuffleEnabled");
+const shuffleIntervalInput = document.getElementById("shuffleInterval");
+const saveShuffleBtn = document.getElementById("saveShuffle");
+const shuffleStatus = document.getElementById("shuffleStatus");
 
 let backgrounds = [];
 let cornerPinState = {
@@ -122,19 +126,73 @@ function bindCornerDrag() {
   });
 }
 
+function escapeAttr(value) {
+  return String(value ?? "").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
 function renderBackgrounds() {
   backgroundList.innerHTML = "";
   backgrounds.forEach((bg, index) => {
     const card = document.createElement("div");
     card.className = "bgCard";
     card.innerHTML = `
-      <img src="${bg.thumbnailUrl}" alt="${bg.label}">
-      <div class="bgActions">
-        <button data-action="up">Up</button>
-        <button data-action="down">Down</button>
-        <button data-action="delete" class="danger">Delete</button>
+      <img src="${bg.thumbnailUrl}" alt="${escapeAttr(bg.label)}">
+      <div class="bgBody">
+        <input class="bgLabel" type="text" maxlength="200" value="${escapeAttr(bg.label)}" />
+        <div class="bgActions">
+          <button data-action="rename">Rename</button>
+          <button data-action="up">Up</button>
+          <button data-action="down">Down</button>
+          <button data-action="delete" class="danger">Delete</button>
+        </div>
       </div>
     `;
+
+    const labelInput = card.querySelector(".bgLabel");
+    const renameBtn = card.querySelector('[data-action="rename"]');
+
+    const persistLabel = async () => {
+      const newLabel = labelInput.value.trim();
+      if (!newLabel || newLabel === bg.label) {
+        labelInput.value = bg.label;
+        labelInput.classList.remove("dirty");
+        return;
+      }
+      renameBtn.disabled = true;
+      try {
+        const updated = await fetchJson(`/api/backgrounds/${bg.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ label: newLabel }),
+        });
+        bg.label = updated.label;
+        labelInput.value = updated.label;
+        labelInput.classList.remove("dirty");
+      } catch (error) {
+        labelInput.value = bg.label;
+        labelInput.classList.remove("dirty");
+        alert(`Could not rename: ${error.message}`);
+      } finally {
+        renameBtn.disabled = false;
+      }
+    };
+
+    labelInput.addEventListener("input", () => {
+      labelInput.classList.toggle("dirty", labelInput.value.trim() !== bg.label);
+    });
+    labelInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        void persistLabel();
+      } else if (event.key === "Escape") {
+        labelInput.value = bg.label;
+        labelInput.classList.remove("dirty");
+        labelInput.blur();
+      }
+    });
+    renameBtn.addEventListener("click", () => {
+      void persistLabel();
+    });
 
     card.querySelector('[data-action="up"]').onclick = async () => {
       if (index === 0) return;
@@ -167,6 +225,35 @@ async function saveOrder() {
 async function loadBackgrounds() {
   backgrounds = await fetchJson("/api/backgrounds");
   renderBackgrounds();
+}
+
+function readShuffleInterval() {
+  const raw = Number(shuffleIntervalInput.value);
+  if (!Number.isFinite(raw) || raw <= 0) return 30;
+  return Math.round(clamp(raw, 1, 3600));
+}
+
+async function persistShuffleSettings({ silent = false } = {}) {
+  const payload = {
+    enabled: shuffleEnabledInput.checked,
+    intervalSeconds: readShuffleInterval(),
+  };
+  const updated = await fetchJson("/api/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ shuffle: payload }),
+  });
+  const s = updated.shuffle || payload;
+  shuffleEnabledInput.checked = Boolean(s.enabled);
+  shuffleIntervalInput.value = String(s.intervalSeconds);
+  if (!silent) {
+    shuffleStatus.textContent = s.enabled
+      ? `Shuffling every ${s.intervalSeconds}s.`
+      : "Shuffle off.";
+    setTimeout(() => {
+      shuffleStatus.textContent = "";
+    }, 2500);
+  }
 }
 
 function wifiFormPayload() {
@@ -269,6 +356,21 @@ wifiHidden.addEventListener("change", () => {
   void persistWifiSettings();
 });
 
+shuffleEnabledInput.addEventListener("change", () => {
+  void persistShuffleSettings();
+});
+
+saveShuffleBtn.addEventListener("click", () => {
+  void persistShuffleSettings();
+});
+
+shuffleIntervalInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    void persistShuffleSettings();
+  }
+});
+
 resetCornersBtn.addEventListener("click", async () => {
   setCornerState({
     tl: { x: 0, y: 0 },
@@ -293,6 +395,13 @@ resetCornersBtn.addEventListener("click", async () => {
     ? String(w.security).toUpperCase()
     : "WPA2";
   wifiHidden.checked = Boolean(w.hidden);
+  const shuffle = config.shuffle || {};
+  shuffleEnabledInput.checked = Boolean(shuffle.enabled);
+  shuffleIntervalInput.value = String(
+    Number.isFinite(Number(shuffle.intervalSeconds)) && Number(shuffle.intervalSeconds) > 0
+      ? Number(shuffle.intervalSeconds)
+      : 30,
+  );
   setCornerState(config.cornerPin);
   bindCornerDrag();
   await loadBackgrounds();

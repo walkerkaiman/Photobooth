@@ -7,6 +7,7 @@ const { ensureStore, reconcileState, DATA_DIR } = require("./store");
 const backgroundsRoute = require("./routes/backgrounds");
 const configRoute = require("./routes/config");
 const { router: networkRoute, normalizeHost, resolveDefaultHost } = require("./routes/network");
+const shuffleService = require("./shuffle");
 
 const DEFAULT_PORT = Number(process.env.PORT || 3000);
 
@@ -50,12 +51,15 @@ async function createApp() {
 }
 
 async function startServer(port = DEFAULT_PORT) {
-  const { server } = await createApp();
+  const { server, io } = await createApp();
 
   await new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, "0.0.0.0", () => resolve());
   });
+
+  shuffleService.attach(io);
+  await shuffleService.reconfigure();
 
   console.log(`Photobooth server listening on http://0.0.0.0:${port}`);
   return { port, server };

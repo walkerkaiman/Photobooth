@@ -8,6 +8,7 @@ Local-first photobooth background projection app for a single projector.
 - Shows two QR codes on projection: one to **join Wi‑Fi** (`WIFI:` standard) and one to open the **background** control page (scan with the phone camera).
 - Lets guests pick still or animated backgrounds (png/jpg/gif/mp4/webm).
 - Guest phones can change backgrounds anytime; the **last selection wins** (no session lock).
+- Optional auto-shuffle: cycle to a random background every N seconds while enabled.
 - Provides an admin page for uploads, ordering, QR host selection, and corner pin.
 
 ## What it does not do
@@ -43,6 +44,7 @@ Tested on Windows 10/11 x64.
 5. Open the admin page on the same machine (or any phone/laptop on the LAN) at `http://localhost:3000/admin` and:
    - Upload a few backgrounds.
    - Enter an event name.
+   - (Optional) Turn on **Shuffle** and set an interval (seconds) to auto-cycle through random backgrounds.
    - Enter your guest Wi‑Fi SSID + password and click **Save Wi‑Fi QR**.
    - Drag the four corner-pin handles to align the projection on whatever surface you're using.
    - Pick the right LAN IP from **QR Host / Network** so the QR points at this machine's IP rather than `localhost`.
