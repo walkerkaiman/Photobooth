@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Photobooth Admin</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        color: #111;
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h2 {
+        margin: 24px 0 12px;
+      }
+      .panel {
+        background: #fff;
+        border-radius: 10px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      }
+      #backgroundList {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 12px;
+      }
+      .bgCard {
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .bgCard img {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+      }
+      .bgActions {
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+      }
+      button {
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 10px;
+        background: #2a7fff;
+        color: #fff;
+      }
+      .danger {
+        background: #cb2e2e;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        margin: 8px 0;
+      }
+      .row input,
+      select {
+        flex: 1;
+        padding: 8px;
+      }
+      #qrImg,
+      #qrWifiImg {
+        width: 140px;
+        display: block;
+      }
+      .qrRow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: flex-start;
+        margin-top: 10px;
+      }
+      .qrPreview {
+        text-align: center;
+      }
+      .qrPreview .muted {
+        margin-top: 6px;
+        max-width: 160px;
+        word-break: break-all;
+      }
+      .muted {
+        color: #555;
+        font-size: 12px;
+      }
+      #cornerEditor {
+        position: relative;
+        width: min(720px, 100%);
+        aspect-ratio: 16 / 9;
+        border: 2px dashed #b7c1d6;
+        border-radius: 10px;
+        background: linear-gradient(180deg, #f7f9ff 0%, #edf2ff 100%);
+        overflow: hidden;
+      }
+      .cornerHandle {
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #2a7fff;
+        border: 2px solid #ffffff;
+        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+        transform: translate(-50%, -50%);
+        cursor: grab;
+      }
+      .cornerHandle.dragging {
+        cursor: grabbing;
+      }
+      .cornerLabel {
+        position: absolute;
+        transform: translate(-50%, -170%);
+        font-size: 11px;
+        font-weight: bold;
+        color: #1d3d7a;
+        user-select: none;
+        pointer-events: none;
+      }
+      #cornerHint {
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Photobooth Admin</h1>
+
+      <h2>Event</h2>
+      <div class="panel">
+        <div class="row">
+          <input type="text" id="eventName" maxlength="200" placeholder="e.g. Smith–Jones Wedding" />
+          <button id="saveEventName" type="button">Save event name</button>
+        </div>
+        <div class="muted">Shown as the main title on the guest “select background” page.</div>
+        <div id="eventNameStatus" class="muted" style="margin-top: 8px"></div>
+      </div>
+
+      <h2>Upload Background</h2>
+      <div class="panel">
+        <form id="uploadForm">
+          <div class="row">
+            <input type="text" id="label" placeholder="Display name" />
+            <input type="file" id="file" accept=".png,.jpg,.jpeg,.gif,.mp4,.webm" required />
+            <button type="submit">Upload</button>
+          </div>
+          <div class="muted">Supported: png, jpg, gif, mp4, webm</div>
+        </form>
+      </div>
+
+      <h2>Background Library</h2>
+      <div class="panel">
+        <div id="backgroundList"></div>
+      </div>
+
+      <h2>Guest Wi‑Fi QR</h2>
+      <div class="panel">
+        <div class="row">
+          <input type="text" id="wifiSsid" maxlength="32" placeholder="Network name (SSID)" />
+          <input type="password" id="wifiPassword" maxlength="128" placeholder="Password" />
+        </div>
+        <div class="row">
+          <select id="wifiSecurity">
+            <option value="WPA2">WPA2 Personal</option>
+            <option value="WPA">WPA Personal</option>
+            <option value="WEP">WEP</option>
+            <option value="NOPASS">Open (no password)</option>
+          </select>
+          <label class="row" style="align-items: center; margin: 0">
+            <input type="checkbox" id="wifiHidden" style="width: auto; flex: 0" />
+            <span>Hidden SSID</span>
+          </label>
+          <button type="button" id="saveWifi">Save Wi‑Fi QR</button>
+        </div>
+        <div class="muted">
+          Standard <code>WIFI:</code> QR format. The Wi‑Fi QR appears on the projection automatically once an SSID is saved. If previews say “restart”, another copy of the app is still holding port 3000 — quit every Photobooth/Node window and start once.
+        </div>
+      </div>
+
+      <h2>QR Host / Network</h2>
+      <div class="panel">
+        <div class="row">
+          <select id="hostSelect"></select>
+          <button id="saveHost">Set QR Host</button>
+        </div>
+        <div class="qrRow">
+          <div class="qrPreview">
+            <div class="muted" style="margin-bottom: 6px">Backgrounds</div>
+            <img id="qrImg" alt="Control QR code" />
+            <div id="qrUrl" class="muted"></div>
+          </div>
+          <div class="qrPreview">
+            <div class="muted" style="margin-bottom: 6px">Wi‑Fi</div>
+            <img id="qrWifiImg" alt="Wi-Fi QR code" style="display: none" />
+            <div id="qrWifiCaption" class="muted">Configure above</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>Corner Pin</h2>
+      <div class="panel">
+        <div id="cornerEditor">
+          <div class="cornerLabel" data-corner-label="tl">TL</div>
+          <div class="cornerLabel" data-corner-label="tr">TR</div>
+          <div class="cornerLabel" data-corner-label="br">BR</div>
+          <div class="cornerLabel" data-corner-label="bl">BL</div>
+          <div class="cornerHandle" data-corner="tl" title="Top left"></div>
+          <div class="cornerHandle" data-corner="tr" title="Top right"></div>
+          <div class="cornerHandle" data-corner="br" title="Bottom right"></div>
+          <div class="cornerHandle" data-corner="bl" title="Bottom left"></div>
+        </div>
+        <div class="row">
+          <button id="resetCorners">Reset</button>
+        </div>
+        <div id="cornerHint" class="muted">Drag a blue circle, then release mouse to apply.</div>
+      </div>
+    </div>
+    <script src="./admin.js"></script>
+  </body>
+</html>

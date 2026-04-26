@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0c0f14" />
+    <title>Choose background</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: radial-gradient(120% 80% at 50% -20%, #1a2744 0%, #0c0f14 45%, #07090c 100%);
+        color: #e8ecf4;
+      }
+
+      .header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        padding: max(16px, env(safe-area-inset-top)) 20px 14px;
+        background: linear-gradient(180deg, rgba(12, 15, 20, 0.96) 0%, rgba(12, 15, 20, 0.88) 70%, transparent 100%);
+        backdrop-filter: blur(10px);
+      }
+
+      .header h1 {
+        margin: 0 0 6px;
+        font-size: 1.35rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .header p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #8b95a8;
+        line-height: 1.35;
+      }
+
+      #status:empty {
+        display: none;
+      }
+      #status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        padding: 8px 12px;
+        max-width: 100%;
+        font-size: 0.8125rem;
+        line-height: 1.35;
+        color: #c5cdd9;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+      }
+
+      #status[data-tone="ok"] {
+        color: #b8f5c8;
+        border-color: rgba(74, 222, 128, 0.25);
+        background: rgba(74, 222, 128, 0.08);
+      }
+
+      #status[data-tone="wait"] {
+        color: #fcd34d;
+        border-color: rgba(251, 191, 36, 0.25);
+        background: rgba(251, 191, 36, 0.08);
+      }
+
+      #status[data-tone="err"] {
+        color: #fecaca;
+        border-color: rgba(248, 113, 113, 0.25);
+        background: rgba(248, 113, 113, 0.08);
+      }
+
+      .wrap {
+        padding: 0 16px max(24px, env(safe-area-inset-bottom));
+      }
+
+      #cards {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding-top: 8px;
+      }
+
+      .card {
+        border-radius: 16px;
+        overflow: hidden;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+      }
+
+      .card-media {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background: #050608;
+      }
+
+      .card-media img,
+      .card-media video {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .card-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 4px 10px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #0c0f14;
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 999px;
+      }
+
+      .card-body {
+        padding: 14px 16px 16px;
+      }
+
+      .card-title {
+        margin: 0 0 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: #f1f4f9;
+      }
+
+      .card button {
+        width: 100%;
+        border: 0;
+        border-radius: 12px;
+        padding: 14px 16px;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: #fff;
+        cursor: pointer;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+        box-shadow: 0 4px 16px rgba(37, 99, 235, 0.45);
+      }
+
+      .card button:active {
+        transform: scale(0.98);
+      }
+
+      .card button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .empty {
+        text-align: center;
+        padding: 48px 20px;
+        color: #8b95a8;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1 id="eventTitle">Photobooth</h1>
+      <div id="status" data-tone="wait">Loading…</div>
+    </div>
+    <div class="wrap">
+      <div id="cards"></div>
+    </div>
+    <script src="./control.js"></script>
+  </body>
+</html>

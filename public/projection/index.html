@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Projection</title>
+    <style>
+      html {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        cursor: none;
+        font-family: Arial, sans-serif;
+      }
+      #stage {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #000;
+        isolation: isolate;
+      }
+      #pinnedSurface {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #000;
+        overflow: hidden;
+      }
+      /* Masks light GPU fringe that can sit on top of 3D-transformed video at the viewport edge. */
+      #pinnedSurface::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 8;
+        pointer-events: none;
+        box-shadow: inset 0 0 0 6px #000;
+      }
+      #pinInner {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        transform-origin: 0 0;
+        background: #000;
+        overflow: hidden;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        will-change: transform;
+      }
+      #mediaContainer {
+        background: #000;
+        overflow: hidden;
+      }
+      #mediaContainer,
+      #mediaContainer img,
+      #mediaContainer video {
+        width: 100%;
+        height: 100%;
+      }
+      #mediaContainer img,
+      #mediaContainer video {
+        object-fit: cover;
+        display: block;
+        background: #000;
+      }
+      #qrPanel {
+        position: absolute;
+        right: 16px;
+        bottom: 16px;
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 10px;
+        padding: 10px;
+        max-width: calc(100% - 32px);
+        z-index: 10;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+      }
+      .qrBlock {
+        width: 112px;
+        flex-shrink: 0;
+      }
+      .qrBlock h3 {
+        margin: 0 0 6px;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #333;
+        text-align: center;
+      }
+      .qrBlock img {
+        width: 100%;
+        display: block;
+        border-radius: 4px;
+      }
+      .qrBlock p {
+        margin: 6px 0 0;
+        font-size: 8px;
+        line-height: 1.25;
+        color: #222;
+        word-break: break-all;
+        text-align: center;
+      }
+      #wifiQrBlock {
+        display: none;
+      }
+      #wifiQrBlock.visible {
+        display: block;
+      }
+      #empty {
+        display: grid;
+        place-items: center;
+        color: #fff;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="pinnedSurface">
+        <div id="pinInner">
+          <div id="mediaContainer"></div>
+          <div id="qrPanel">
+            <div id="wifiQrBlock" class="qrBlock">
+              <h3>Wi‑Fi</h3>
+              <img id="qrWifiImage" alt="Wi-Fi QR code" />
+              <p id="qrWifiText"></p>
+            </div>
+            <div class="qrBlock">
+              <h3>Backgrounds</h3>
+              <img id="qrControlImage" alt="Control QR code" />
+              <p id="qrControlText"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="./projection.js"></script>
+  </body>
+</html>
