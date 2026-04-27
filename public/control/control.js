@@ -1,6 +1,11 @@
 const statusEl = document.getElementById("status");
 const cardsEl = document.getElementById("cards");
 const eventTitleEl = document.getElementById("eventTitle");
+const shuffleToggleEl = document.getElementById("shuffleToggle");
+
+let backgrounds = [];
+let currentBackgroundId = null;
+let toastTimer = null;
 
 function applyEventTitle(config) {
   const raw = typeof config?.eventName === "string" ? config.eventName.trim() : "";
@@ -9,10 +14,9 @@ function applyEventTitle(config) {
   document.title = title;
 }
 
-async function loadEventTitle() {
-  const res = await fetch("/api/config");
-  const config = await res.json();
-  applyEventTitle(config);
+function applyShuffleState(config) {
+  const enabled = Boolean(config?.shuffle?.enabled);
+  shuffleToggleEl.checked = enabled;
 }
 
 function setStatus(text, tone = "neutral") {
@@ -22,6 +26,78 @@ function setStatus(text, tone = "neutral") {
   else if (tone === "err") statusEl.dataset.tone = "err";
   else delete statusEl.dataset.tone;
 }
+
+function refreshOnScreenStatus() {
+  if (!backgrounds.length) {
+    setStatus("Nothing to show yet.", "wait");
+    return;
+  }
+  const match = backgrounds.find((b) => b.id === currentBackgroundId);
+  if (match) {
+    setStatus(`On screen: ${match.label || "Untitled"}`, "ok");
+  } else {
+    setStatus("", "neutral");
+  }
+}
+
+function showToast(text, tone = "ok", ms = 2500) {
+  if (toastTimer) {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+  }
+  setStatus(text, tone);
+  toastTimer = setTimeout(() => {
+    toastTimer = null;
+    refreshOnScreenStatus();
+  }, ms);
+}
+
+function setCurrentBackground(id) {
+  currentBackgroundId = id || null;
+  if (!toastTimer) {
+    refreshOnScreenStatus();
+  }
+}
+
+async function loadInitialConfig() {
+  const res = await fetch("/api/config");
+  const config = await res.json();
+  applyEventTitle(config);
+  applyShuffleState(config);
+  currentBackgroundId = config.currentBackgroundId || null;
+}
+
+async function setShuffleEnabled(enabled) {
+  shuffleToggleEl.disabled = true;
+  try {
+    const res = await fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shuffle: { enabled } }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.error || "Could not change shuffle.", "err");
+      shuffleToggleEl.checked = !enabled;
+      return;
+    }
+    const config = await res.json();
+    applyShuffleState(config);
+    showToast(
+      enabled ? "Shuffle on — backgrounds will cycle." : "Shuffle off.",
+      "ok",
+    );
+  } catch {
+    showToast("Network error — try again.", "err");
+    shuffleToggleEl.checked = !enabled;
+  } finally {
+    shuffleToggleEl.disabled = false;
+  }
+}
+
+shuffleToggleEl.addEventListener("change", () => {
+  void setShuffleEnabled(shuffleToggleEl.checked);
+});
 
 function createPreviewMedia(bg) {
   if (bg.type === "video") {
@@ -51,7 +127,7 @@ function mediaBadgeLabel(bg) {
 
 async function loadBackgrounds() {
   const res = await fetch("/api/backgrounds");
-  const backgrounds = await res.json();
+  backgrounds = await res.json();
   cardsEl.innerHTML = "";
 
   if (!backgrounds.length) {
@@ -59,7 +135,9 @@ async function loadBackgrounds() {
     empty.className = "empty";
     empty.textContent = "No backgrounds yet. Ask the booth operator to add some in admin.";
     cardsEl.appendChild(empty);
-    setStatus("Nothing to show yet.", "wait");
+    if (!toastTimer) {
+      refreshOnScreenStatus();
+    }
     return;
   }
 
@@ -95,12 +173,12 @@ async function loadBackgrounds() {
         });
         if (!result.ok) {
           const err = await result.json().catch(() => ({}));
-          setStatus(err.error || "Could not update background.", "err");
+          showToast(err.error || "Could not update background.", "err");
           return;
         }
-        setStatus(`On screen: ${bg.label}`, "ok");
+        setCurrentBackground(bg.id);
       } catch {
-        setStatus("Network error — try again.", "err");
+        showToast("Network error — try again.", "err");
       } finally {
         button.disabled = false;
       }
@@ -113,15 +191,37 @@ async function loadBackgrounds() {
     cardsEl.appendChild(card);
   });
 
-  setStatus("", "neutral");
+  if (!toastTimer) {
+    refreshOnScreenStatus();
+  }
+}
+
+if (typeof io === "function") {
+  const socket = io();
+  socket.on("config:updated", (config) => {
+    if (!config) return;
+    applyEventTitle(config);
+    applyShuffleState(config);
+    setCurrentBackground(config.currentBackgroundId);
+  });
+  socket.on("background:changed", ({ backgroundId } = {}) => {
+    setCurrentBackground(backgroundId);
+  });
+  socket.on("backgrounds:updated", async () => {
+    await loadBackgrounds();
+  });
 }
 
 (async () => {
   setStatus("Loading…", "wait");
   try {
-    await loadEventTitle();
+    await loadInitialConfig();
   } catch {
     applyEventTitle({});
+    applyShuffleState({});
   }
   await loadBackgrounds();
+  if (!toastTimer) {
+    refreshOnScreenStatus();
+  }
 })();
