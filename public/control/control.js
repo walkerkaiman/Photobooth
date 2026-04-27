@@ -34,7 +34,7 @@ function refreshOnScreenStatus() {
   }
   const match = backgrounds.find((b) => b.id === currentBackgroundId);
   if (match) {
-    setStatus(`On screen: ${match.label || "Untitled"}`, "ok");
+    setStatus(`Current Background: ${match.label || "Untitled"}`, "ok");
   } else {
     setStatus("", "neutral");
   }
